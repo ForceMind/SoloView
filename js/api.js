@@ -173,7 +173,7 @@ export class OpenEyeService {
                     id: String(id),
                     type: cardType,
                     content: {
-                        title: title || contentData.description || '无题', // 很多 UGC 内容只有 description
+                        title: title || '', // 移除默认的 'No Title' 占位符，方便前端判断是否隐藏文本区
                         desc: contentData.description || contentData.subTitle || '',
                         cover: cover,
                         duration: contentData.duration ? this._formatDuration(contentData.duration) : null,
