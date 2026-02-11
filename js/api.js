@@ -7,16 +7,16 @@
 
 export class OpenEyeService {
     constructor() {
-        // [国内访问推荐] 
-        // 1. 如果有自己的 Cloudflare 自定义域名，填在这里 (例如 https://api.mydomain.com/?)
-        // 2. 如果部署到 Vercel，这里会自动使用相对路径 '/api/proxy?'
-        // 3. 否则保持为空，回退到公共代理
-        this.myWorkerUrl = 'https://shy-mud-2d49.wxx110007.workers.dev/?'; 
+        // [国内服务器直连模式]
+        // 前端: GitHub Pages (HTTPS) -> 后端: 您的国内服务器 (HTTP)
+        // 警告: 现代浏览器禁止 HTTPS 网页请求 HTTP 接口 (Mixed Content 错误)。
+        // 如果 GitHub Pages 强制 HTTPS，您必须给 124.221.6.7 绑定域名并配置 SSL 证书才能用。
+        // 或者使用 http://localhost 本地测试。
+        this.myWorkerUrl = 'http://124.221.6.7:8080/api/proxy?'; 
         
-        // 检测是否在 Vercel 环境下运行
-        // 确保使用 Vercel 的 Proxy 功能，而不是直接访问 api/proxy
-        if (window.location.hostname.includes('vercel.app')) {
-             // 自动使用当前域名的 api/proxy
+        // 检测是否在 Vercel 环境下运行 或 自建服务器 (同源访问)
+        const hostname = window.location.hostname;
+        if (hostname.includes('vercel.app') || hostname === '124.221.6.7' || hostname === 'localhost') {
             const currentOrigin = window.location.origin;
             this.myWorkerUrl = `${currentOrigin}/api/proxy?`;
         }

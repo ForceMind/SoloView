@@ -34,15 +34,20 @@ export class Translator {
         }
 
         const targetUrl = `${this.config.baseUrl}/chat/completions`;
-        // 检测 Vercel 环境
-        let proxyUrl;
-        if (window.location.hostname.includes('vercel.app')) {
+        
+        // 优先使用强制指定的国内服务器
+        // 注意: GitHub Pages (HTTPS) 请求 HTTP IP 会报 Mixed Content 错误，除非您的服务器有 SSL 证书
+        let proxyUrl = `http://124.221.6.7:8080/api/proxy?${targetUrl}`;
+
+        // 如果是 Vercel 或 同源部署，使用相对路径
+        const hostname = window.location.hostname;
+        if (hostname.includes('vercel.app') || hostname === '124.221.6.7' || hostname === 'localhost') {
             proxyUrl = `/api/proxy?${targetUrl}`;
         } else {
-             // 否则使用 CORS 代理 (Cloudflare Worker 或 CorsProxy.io)
+            // 最后回退到公共代理 (逻辑保持兼容)
             // 请在此处填入您的 Cloudflare Worker 地址以获得最佳性能
-             const workerUrl = 'https://shy-mud-2d49.wxx110007.workers.dev/?';
-             proxyUrl = `${workerUrl}${targetUrl}`;
+            const workerUrl = 'https://shy-mud-2d49.wxx110007.workers.dev/?';
+            proxyUrl = `${workerUrl}${targetUrl}`;
         }
 
         const requestBody = {
