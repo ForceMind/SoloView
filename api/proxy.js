@@ -1,5 +1,7 @@
-// Vercel Serverless Function (Node.js Runtime)
-// 不使用 'edge' runtime，因为 Node.js 环境兼容性更好，更不容易报错
+// Vercel Serverless Function (Edge Runtime)
+export const config = {
+  runtime: 'edge',
+};
 
 export default async function handler(request) {
   // 1. 处理 CORS 预检
@@ -24,22 +26,15 @@ export default async function handler(request) {
   const targetUrl = targetUrlStr.startsWith('http') ? targetUrlStr : decodeURIComponent(targetUrlStr);
 
   // 2. 构建安全的请求头
-  // 不要直接复制 request.headers，因为包含 Vercel 内部头会导致 upstream 报错
   const headers = new Headers();
   
-  // 伪装成普通浏览器，防止 API 屏蔽 Serverless UA
+  // 伪装成普通浏览器
   headers.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
   
   // 只传递必要的头
-  if (request.headers.get('Content-Type')) {
-    headers.set('Content-Type', request.headers.get('Content-Type'));
-  }
-  if (request.headers.get('Authorization')) {
-    headers.set('Authorization', request.headers.get('Authorization'));
-  }
-  if (request.headers.get('Accept')) {
-    headers.set('Accept', request.headers.get('Accept'));
-  }
+  if (request.headers.get('Content-Type')) headers.set('Content-Type', request.headers.get('Content-Type'));
+  if (request.headers.get('Authorization')) headers.set('Authorization', request.headers.get('Authorization'));
+  if (request.headers.get('Accept')) headers.set('Accept', request.headers.get('Accept'));
 
   const fetchOptions = {
     method: request.method,
@@ -48,15 +43,13 @@ export default async function handler(request) {
   };
 
   // 处理 Body (仅非 GET/HEAD)
-  // GET 请求传递 body 会导致 500
+  // 关键修复: 这里的逻辑在 Edge Runtime 下是必须的
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     try {
-        const body = await request.arrayBuffer();
-        if (body.byteLength > 0) {
-            fetchOptions.body = body;
-        }
+        // Edge Runtime 支持直接透传 request.body 流，或者使用 arrayBuffer
+        fetchOptions.body = request.body;
     } catch (e) {
-        console.error('Body read error:', e);
+        console.error('Body error:', e);
     }
   }
 
@@ -79,7 +72,7 @@ export default async function handler(request) {
       headers: newHeaders
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message, stack: error.stack }), {
+    return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: {
         'Content-Type': 'application/json',

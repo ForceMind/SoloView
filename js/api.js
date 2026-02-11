@@ -193,6 +193,11 @@ export class OpenEyeService {
                     cover = contentData.bgPicture;
                 }
 
+                // 强制 HTTPS 避免混合内容警告
+                if (cover && typeof cover === 'string' && cover.startsWith('http:')) {
+                    cover = cover.replace('http:', 'https:');
+                }
+
                 // 2026-02-11: 严格过滤 - 忽略没有封面的非内容卡片 (如"主题创作广场"等)
                 // 确保必须有有效封面才展示，过滤掉纯导航入口
                 if (!cover) return;
