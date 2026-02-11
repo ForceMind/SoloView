@@ -23,7 +23,12 @@ export default async function handler(request) {
     return new Response('Usage: /api/proxy?https://target-url', { status: 400 });
   }
 
-  const targetUrl = targetUrlStr.startsWith('http') ? targetUrlStr : decodeURIComponent(targetUrlStr);
+  // 修复 URL 解码逻辑
+  // 之前的逻辑有误：startsWith('http') 对 'http%3A' 也返回 true，导致编码后的 URL 未被解码就传入 fetch
+  let targetUrl = targetUrlStr;
+  if (targetUrlStr.startsWith('http%3A') || targetUrlStr.startsWith('https%3A')) {
+      targetUrl = decodeURIComponent(targetUrlStr);
+  }
 
   // 2. 构建安全的请求头
   const headers = new Headers();
