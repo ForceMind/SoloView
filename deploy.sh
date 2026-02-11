@@ -64,15 +64,29 @@ echo "[Info] Installing dependencies..."
 npm install
 
 # 4. 停止旧服务 (如果存在)
-pm2 stop soloview-server 2>/dev/null || true
-pm2 delete soloview-server 2>/dev/null || true
+# 为了更稳健地找到 PM2，先尝试查找路径
+PM2_CMD="pm2"
+if ! command -v pm2 &> /dev/null; then
+    if [ -f /usr/local/bin/pm2 ]; then
+        PM2_CMD="/usr/local/bin/pm2"
+    elif [ -f /usr/bin/pm2 ]; then
+        PM2_CMD="/usr/bin/pm2"
+    else
+        # 最后的尝试：使用 npx
+        echo "[Warn] PM2 not found in PATH. Using npx..."
+        PM2_CMD="npx pm2"
+    fi
+fi
+
+$PM2_CMD stop soloview-server 2>/dev/null || true
+$PM2_CMD delete soloview-server 2>/dev/null || true
 
 # 5. 启动服务
 echo "[Info] Starting server on port 8080..."
-pm2 start server.js --name soloview-server
+$PM2_CMD start server.js --name soloview-server
 
 # 6. 保存 PM2 列表开机自启
-pm2 save
+$PM2_CMD save
 # 注意: 第一次运行可能需要执行 pm2 startup，根据提示操作即可
 
 echo "========================================="
