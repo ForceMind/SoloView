@@ -14,8 +14,11 @@ export class OpenEyeService {
         this.myWorkerUrl = 'https://shy-mud-2d49.wxx110007.workers.dev/?'; 
         
         // 检测是否在 Vercel 环境下运行
+        // 确保使用 Vercel 的 Proxy 功能，而不是直接访问 api/proxy
         if (window.location.hostname.includes('vercel.app')) {
-            this.myWorkerUrl = '/api/proxy?';
+             // 自动使用当前域名的 api/proxy
+            const currentOrigin = window.location.origin;
+            this.myWorkerUrl = `${currentOrigin}/api/proxy?`;
         }
 
         // 建议使用 cors.io 或类似的公共代理来绕过浏览器开发时的 CORS 限制

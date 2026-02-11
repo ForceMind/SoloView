@@ -29,28 +29,42 @@ export default async function handler(request) {
   const targetUrl = targetUrlStr.startsWith('http') ? targetUrlStr : decodeURIComponent(targetUrlStr);
 
   // 2. 转发请求
-  // 注意：Vercel Edge 可能会自动处理某些 Host 头，但显式构建新请求更安全
-  const newRequest = new Request(targetUrl, {
+  // 关键修复: GET/HEAD 请求不能包含 body，否则会报错 500
+  const fetchOptions = {
     method: request.method,
-    headers: request.headers,
-    body: request.body,
-  });
+    headers: new Headers(request.headers),
+  };
+
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    fetchOptions.body = request.body;
+  }
 
   // 删除敏感头
-  newRequest.headers.delete('Host');
-  newRequest.headers.delete('Referer');
-  newRequest.headers.delete('Origin');
+  fetchOptions.headers.delete('Host');
+  fetchOptions.headers.delete('Referer');
+  fetchOptions.headers.delete('Origin');
+  // 可选: 伪造 Referer 避免被防盗链 (如果开眼 API 检查的话)
+  // fetchOptions.headers.set('Referer', 'http://www.kaiyanapp.com/');
 
   try {
-    const response = await fetch(newRequest);
+    const response = await fetch(targetUrl, fetchOptions);
 
     // 3. 构建响应
-    const newResponse = new Response(response.body, response);
+    const newResponse = new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: new Headers(response.headers)
+    });
+
     newResponse.headers.set('Access-Control-Allow-Origin', '*');
     newResponse.headers.set('Access-Control-Allow-Methods', 'GET, HEAD, POST, OPTIONS');
+    newResponse.headers.set('Access-Control-Allow-Headers', '*');
 
     return newResponse;
   } catch (e) {
-    return new Response('Proxy Error: ' + e.message, { status: 500 });
+    return new Response('Proxy Error: ' + e.message, { 
+        status: 500,
+        headers: { 'Access-Control-Allow-Origin': '*' }
+    });
   }
 }
