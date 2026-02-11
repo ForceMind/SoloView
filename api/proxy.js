@@ -1,12 +1,11 @@
-
-export const config = {
-  runtime: 'edge',
-};
+// Vercel Serverless Function (Node.js Runtime)
+// 不使用 'edge' runtime，因为 Node.js 环境兼容性更好，更不容易报错
 
 export default async function handler(request) {
   // 1. 处理 CORS 预检
   if (request.method === 'OPTIONS') {
     return new Response(null, {
+      status: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, HEAD, POST, OPTIONS',
@@ -16,55 +15,76 @@ export default async function handler(request) {
   }
 
   const url = new URL(request.url);
-  // 解析目标地址: 获取 '?' 后面的所有内容
   const targetUrlStr = url.search.substring(1);
 
   if (!targetUrlStr) {
-    return new Response('Proxy is running. Usage: /api/proxy?https://target-url', {
-      status: 200,
-    });
+    return new Response('Usage: /api/proxy?https://target-url', { status: 400 });
   }
 
-  // 解码
   const targetUrl = targetUrlStr.startsWith('http') ? targetUrlStr : decodeURIComponent(targetUrlStr);
 
-  // 2. 转发请求
-  // 关键修复: GET/HEAD 请求不能包含 body，否则会报错 500
-  const fetchOptions = {
-    method: request.method,
-    headers: new Headers(request.headers),
-  };
-
-  if (request.method !== 'GET' && request.method !== 'HEAD') {
-    fetchOptions.body = request.body;
+  // 2. 构建安全的请求头
+  // 不要直接复制 request.headers，因为包含 Vercel 内部头会导致 upstream 报错
+  const headers = new Headers();
+  
+  // 伪装成普通浏览器，防止 API 屏蔽 Serverless UA
+  headers.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+  
+  // 只传递必要的头
+  if (request.headers.get('Content-Type')) {
+    headers.set('Content-Type', request.headers.get('Content-Type'));
+  }
+  if (request.headers.get('Authorization')) {
+    headers.set('Authorization', request.headers.get('Authorization'));
+  }
+  if (request.headers.get('Accept')) {
+    headers.set('Accept', request.headers.get('Accept'));
   }
 
-  // 删除敏感头
-  fetchOptions.headers.delete('Host');
-  fetchOptions.headers.delete('Referer');
-  fetchOptions.headers.delete('Origin');
-  // 可选: 伪造 Referer 避免被防盗链 (如果开眼 API 检查的话)
-  // fetchOptions.headers.set('Referer', 'http://www.kaiyanapp.com/');
+  const fetchOptions = {
+    method: request.method,
+    headers: headers,
+    redirect: 'follow'
+  };
+
+  // 处理 Body (仅非 GET/HEAD)
+  // GET 请求传递 body 会导致 500
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    try {
+        const body = await request.arrayBuffer();
+        if (body.byteLength > 0) {
+            fetchOptions.body = body;
+        }
+    } catch (e) {
+        console.error('Body read error:', e);
+    }
+  }
 
   try {
     const response = await fetch(targetUrl, fetchOptions);
 
     // 3. 构建响应
-    const newResponse = new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers: new Headers(response.headers)
+    const newHeaders = new Headers(response.headers);
+    newHeaders.set('Access-Control-Allow-Origin', '*');
+    newHeaders.set('Access-Control-Allow-Methods', 'GET, HEAD, POST, OPTIONS');
+    newHeaders.set('Access-Control-Allow-Headers', '*');
+    
+    // 移除可能引起 CORS 问题的头
+    newHeaders.delete('Content-Encoding'); 
+    newHeaders.delete('Content-Length');
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: newHeaders
     });
-
-    newResponse.headers.set('Access-Control-Allow-Origin', '*');
-    newResponse.headers.set('Access-Control-Allow-Methods', 'GET, HEAD, POST, OPTIONS');
-    newResponse.headers.set('Access-Control-Allow-Headers', '*');
-
-    return newResponse;
-  } catch (e) {
-    return new Response('Proxy Error: ' + e.message, { 
-        status: 500,
-        headers: { 'Access-Control-Allow-Origin': '*' }
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message, stack: error.stack }), {
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      }
     });
   }
 }
