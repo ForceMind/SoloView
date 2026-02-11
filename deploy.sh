@@ -11,15 +11,36 @@ echo "========================================="
 if ! command -v node &> /dev/null; then
     echo "[Info] Node.js not found. Installing..."
     
-    # 简单的安装逻辑 (使用 NodeSource)
-    if [ -f /etc/redhat-release ]; then
-        # CentOS / RHEL
-        curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
-        sudo yum install -y nodejs
+    # 检测系统发行版
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        OS=$ID
+    elif [ -f /etc/redhat-release ]; then
+        OS="centos"
     else
-        # Ubuntu / Debian
+        echo "Unsupported OS. Please install Node.js manually."
+        exit 1
+    fi
+
+    # 安装 Node.js
+    if [[ "$OS" == "opencloudos" || "$OS" == "centos" || "$OS" == "rhel" || "$OS" == "fedora" || "$OS" == "rocky" || "$OS" == "almalinux" ]]; then
+        # CentOS / RHEL / OpenCloudOS 系列
+        # 尝试使用 yum (部分旧系统) 或 dnf
+        if command -v dnf &> /dev/null; then
+            sudo dnf module enable nodejs:18 -y || true
+            sudo dnf install -y nodejs
+        else
+             # 如果没有 dnf，尝试添加 NodeSource 源 (通用 RHEL 兼容)
+             curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+             sudo yum install -y nodejs
+        fi
+    elif [[ "$OS" == "ubuntu" || "$OS" == "debian" || "$OS" == "kali" ]]; then
+        # Ubuntu / Debian 系列
         curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
         sudo apt-get install -y nodejs
+    else
+         echo "Unsupported OS: $OS. Please install Node.js manually."
+         exit 1
     fi
 else
     echo "[Info] Node.js is already installed: $(node -v)"
@@ -28,7 +49,13 @@ fi
 # 2. 检查是否安装 PM2 (进程管理)
 if ! command -v pm2 &> /dev/null; then
     echo "[Info] Installing PM2..."
-    sudo npm install -g pm2
+    # 确保 npm 存在
+    if command -v npm &> /dev/null; then
+        sudo npm install -g pm2
+    else
+        echo "[Error] npm not found. Node.js installation might have failed."
+        exit 1
+    fi
 fi
 
 # 3. 安装依赖
