@@ -34,7 +34,16 @@ export class Translator {
         }
 
         const targetUrl = `${this.config.baseUrl}/chat/completions`;
-        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+        // 检测 Vercel 环境
+        let proxyUrl;
+        if (window.location.hostname.includes('vercel.app')) {
+            proxyUrl = `/api/proxy?${targetUrl}`;
+        } else {
+             // 否则使用 CORS 代理 (Cloudflare Worker 或 CorsProxy.io)
+            // 请在此处填入您的 Cloudflare Worker 地址以获得最佳性能
+             const workerUrl = 'https://shy-mud-2d49.wxx110007.workers.dev/?';
+             proxyUrl = `${workerUrl}${targetUrl}`;
+        }
 
         const requestBody = {
             model: this.config.model,

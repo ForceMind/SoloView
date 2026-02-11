@@ -7,11 +7,17 @@
 
 export class OpenEyeService {
     constructor() {
-        // [用户需更改] 请在此处填入您刚刚部署的 Cloudflare Worker 地址
-        // 格式: 'https://xxx.xxx.workers.dev/?' (注意最后要带上 /? )
-        // 如果您还没有部署，暂时保持空字符串，代码会自动使用公共代理
+        // [国内访问推荐] 
+        // 1. 如果有自己的 Cloudflare 自定义域名，填在这里 (例如 https://api.mydomain.com/?)
+        // 2. 如果部署到 Vercel，这里会自动使用相对路径 '/api/proxy?'
+        // 3. 否则保持为空，回退到公共代理
         this.myWorkerUrl = 'https://shy-mud-2d49.wxx110007.workers.dev/?'; 
         
+        // 检测是否在 Vercel 环境下运行
+        if (window.location.hostname.includes('vercel.app')) {
+            this.myWorkerUrl = '/api/proxy?';
+        }
+
         // 建议使用 cors.io 或类似的公共代理来绕过浏览器开发时的 CORS 限制
         this.proxyUrl = 'https://cors-anywhere.herokuapp.com/'; 
         // fallbackProxy: 'https://api.allorigins.win/raw?url=';
