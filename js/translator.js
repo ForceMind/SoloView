@@ -9,7 +9,7 @@ export class Translator {
         // 例如使用 OpenAI: https://api.openai.com/v1
         // 或其他兼容接口: https://api.deepseek.com/v1
         this.config = {
-            apiKey: '2278f229c1698414e0228fa232613b76:ODQyYTJiYWM2YWRjZTg0NWE3N2JkZTk2', 
+            apiKey: 'xxxxxxxxxxxxxxxxxxxxx', // 请替换为您的 API Key
             baseUrl: 'https://maas-api.cn-huabei-1.xf-yun.com/v2',
             model: 'xopglmv47flash'
         };

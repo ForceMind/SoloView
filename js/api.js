@@ -7,8 +7,12 @@
 
 export class OpenEyeService {
     constructor() {
-        // 使用 cors.io 或类似的公共代理来绕过浏览器开发时的 CORS 限制
-        // 在生产环境中，你会通过自己的后端服务器转发，或者使用支持 CORS 的 API
+        // [用户需更改] 请在此处填入您刚刚部署的 Cloudflare Worker 地址
+        // 格式: 'https://xxx.xxx.workers.dev/?' (注意最后要带上 /? )
+        // 如果您还没有部署，暂时保持空字符串，代码会自动使用公共代理
+        this.myWorkerUrl = 'https://shy-mud-2d49.wxx110007.workers.dev/?'; 
+        
+        // 建议使用 cors.io 或类似的公共代理来绕过浏览器开发时的 CORS 限制
         this.proxyUrl = 'https://cors-anywhere.herokuapp.com/'; 
         // fallbackProxy: 'https://api.allorigins.win/raw?url=';
         
@@ -28,6 +32,10 @@ export class OpenEyeService {
         const secureUrl = targetUrl.replace('http:', 'https:');
 
         // 代理列表 (优先级从高到低)
+        // 0. [Self-Hosted] 您的专属 Cloudflare Worker (如果配置了)
+        //    这是最快、最稳定的方式。
+        const myProxy = this.myWorkerUrl ? `${this.myWorkerUrl}${encodeURIComponent(secureUrl)}` : null;
+
         // 1. CorsProxy.io (速度快，支持流式)
         const proxy1 = `https://corsproxy.io/?${encodeURIComponent(secureUrl)}`;
         // 2. AllOrigins (JSON 包装模式，最稳定，不容易报 CORS 错，但需要二次解析)
@@ -51,21 +59,34 @@ export class OpenEyeService {
         try {
             let data = null;
 
-            // 策略 A: 直接请求 (若用户有插件/环境支持)
-            try {
-                data = await tryFetch(secureUrl);
-                console.log('[API] Direct fetch success');
-            } catch (e) {
-                console.log('[API] Direct fetch failed, trying Proxy 1...');
-                // 策略 B: CorsProxy
+            // 策略 A: 专属 Worker (最优先)
+            if (myProxy) {
                 try {
-                    data = await tryFetch(proxy1);
-                    console.log('[API] Proxy 1 success');
-                } catch (e2) {
-                    console.log('[API] Proxy 1 failed, trying Proxy 2...');
-                    // 策略 C: AllOrigins (Wrapper Mode)
-                    data = await tryFetch(proxy2, true);
-                    console.log('[API] Proxy 2 success');
+                    data = await tryFetch(myProxy);
+                    console.log('[API] MyWorker fetch success');
+                } catch (e0) {
+                    console.log('[API] MyWorker failed, falling back...', e0);
+                }
+            }
+
+            // 如果已经拿到数据，直接跳出
+            if (!data) {
+                // 策略 B: 直接请求 (若用户有插件/环境支持)
+                try {
+                    data = await tryFetch(secureUrl);
+                    console.log('[API] Direct fetch success');
+                } catch (e) {
+                    console.log('[API] Direct fetch failed, trying Proxy 1...');
+                    // 策略 C: CorsProxy
+                    try {
+                        data = await tryFetch(proxy1);
+                        console.log('[API] Proxy 1 success');
+                    } catch (e2) {
+                        console.log('[API] Proxy 1 failed, trying Proxy 2...');
+                        // 策略 D: AllOrigins (Wrapper Mode)
+                        data = await tryFetch(proxy2, true);
+                        console.log('[API] Proxy 2 success');
+                    }
                 }
             }
 
