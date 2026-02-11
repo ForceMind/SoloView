@@ -15,6 +15,15 @@ class App {
         this.container = document.getElementById('feed-container');
         this.sentinel = document.getElementById('loading-sentinel');
         this.translateBtn = document.getElementById('global-translate-btn');
+        this.navbar = document.getElementById('navbar'); // 获取导航栏
+
+        // Modal Elements
+        this.modal = document.getElementById('detail-modal');
+        this.modalCloseBtn = document.getElementById('modal-close-btn');
+        this.modalVideo = document.getElementById('modal-video');
+        this.modalImage = document.getElementById('modal-image');
+        this.modalTitle = document.getElementById('modal-title');
+        this.modalDesc = document.getElementById('modal-desc');
         
         this.isLoading = false;
         this.isGlobalTranslateOn = false; // 全局翻译开关
@@ -25,7 +34,55 @@ class App {
     init() {
         this.setupInfiniteScroll();
         this.setupGlobalTranslate();
+        this.setupInteractions(); // 新增交互设置
         this.loadMore(); // 初始加载
+    }
+
+    // 绑定通用交互事件
+    setupInteractions() {
+        // 1. 双击顶部回到顶部
+        this.navbar.addEventListener('dblclick', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // 2. 模态框关闭事件
+        const closeModal = () => {
+            this.modal.classList.add('hidden');
+            this.modalVideo.pause();
+            this.modalVideo.src = ""; // 清空资源
+            document.body.style.overflow = ''; // 恢复滚动
+        };
+
+        this.modalCloseBtn.addEventListener('click', closeModal);
+        this.modal.querySelector('.click-to-close').addEventListener('click', closeModal);
+    }
+    
+    // 打开详情模态框
+    openDetail(item) {
+        const content = item.content;
+        
+        // 填充文本
+        this.modalTitle.textContent = content.title;
+        this.modalDesc.textContent = content.desc;
+
+        // 根据类型填充媒体
+        if (item.type === 'video' && content.playUrl) {
+            this.modalVideo.src = content.playUrl;
+            this.modalVideo.classList.remove('hidden');
+            this.modalImage.classList.add('hidden');
+            // 自动播放
+            this.modalVideo.play().catch(e => console.log('Autoplay blocked', e));
+        } else {
+            // 图文模式
+            this.modalVideo.pause();
+            this.modalVideo.classList.add('hidden');
+            this.modalImage.src = content.cover;
+            this.modalImage.classList.remove('hidden');
+        }
+
+        // 显示 Modal
+        this.modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden'; // 禁止背景滚动
     }
 
     setupGlobalTranslate() {
@@ -112,6 +169,14 @@ class App {
     renderItems(items) {
         items.forEach(async (item) => {
             const card = CardFactory.createCard(item);
+            
+            // 绑定点击事件打开详情
+            card.addEventListener('click', () => {
+                this.openDetail(item);
+            });
+            // 鼠标指针样式
+            card.style.cursor = 'pointer';
+
             this.container.appendChild(card);
             
             // 如果全局翻译已开启，新加载的卡片也要自动翻译

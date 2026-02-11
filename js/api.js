@@ -161,11 +161,19 @@ export class OpenEyeService {
                     cover = contentData.bgPicture;
                 }
 
+                // 2026-02-11: 严格过滤 - 忽略没有封面的非内容卡片 (如"主题创作广场"等)
+                // 确保必须有有效封面才展示，过滤掉纯导航入口
+                if (!cover) return;
+                
+                // 过滤掉特定标题的运营卡片
+                const title = contentData.title || '';
+                if (title.includes('主题创作广场') || title.includes('话题讨论大厅')) return;
+
                 normalized.push({
                     id: String(id),
                     type: cardType,
                     content: {
-                        title: contentData.title || contentData.description || 'No Title', // 很多 UGC 内容只有 description
+                        title: title || contentData.description || '无题', // 很多 UGC 内容只有 description
                         desc: contentData.description || contentData.subTitle || '',
                         cover: cover,
                         duration: contentData.duration ? this._formatDuration(contentData.duration) : null,
