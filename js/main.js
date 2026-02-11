@@ -13,6 +13,7 @@ class App {
         this.translator = new Translator();
         
         this.container = document.getElementById('feed-container');
+        this.initialLoader = document.getElementById('initial-loader'); // 获取全屏加载层
         this.sentinel = document.getElementById('loading-sentinel');
         this.translateBtn = document.getElementById('global-translate-btn');
         this.navbar = document.getElementById('navbar'); // 获取导航栏
@@ -86,6 +87,7 @@ class App {
     }
 
     setupGlobalTranslate() {
+        if (!this.translateBtn) return; // 防止按钮不存在时报错
         this.translateBtn.addEventListener('click', () => {
              this.toggleGlobalTranslation();
         });
@@ -159,8 +161,19 @@ class App {
         try {
             const items = await this.api.fetchFeed();
             this.renderItems(items);
+            
+            // 首次加载成功后，移除全屏 Loading
+            if (this.initialLoader) {
+                this.initialLoader.classList.add('opacity-0', 'pointer-events-none'); // 淡出效果
+                setTimeout(() => {
+                    this.initialLoader.remove();
+                    this.initialLoader = null;
+                }, 500);
+            }
         } catch (error) {
             console.error('Failed to load feed:', error);
+            // 失败也要移除，否则用户会卡在 Loading 界面
+            if (this.initialLoader) this.initialLoader.remove();
         } finally {
             this.setLoading(false);
         }

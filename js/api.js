@@ -88,7 +88,9 @@ export class OpenEyeService {
         } catch (error) {
             console.error("All strategies failed:", error);
             // 最后的兜底
-            return this._getFallbackMockData(); 
+            // 演示模式：隐藏 Mock 数据，失败就留白，看起来更干净
+            // return this._getFallbackMockData(); 
+            return [];
         }
     }
 
