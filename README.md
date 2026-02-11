@@ -16,7 +16,21 @@ e:\Privy\SoloView\
     └── translator.js   # AI 翻译服务 (OpenAI 接入)
 ```
 
-## 2. 快速开始
+## 2. 使用的外部 API (External APIs)
+
+本项目集成了以下第三方服务。具体实现逻辑分散在 `js` 文件夹的不同模块中。
+
+| 服务名称 | 用途 | 原始接口地址 (Base URL) | 代码位置 | 备注 |
+| :--- | :--- | :--- | :--- | :--- |
+| **OpenEye (开眼)** | 提供视频流、资讯卡片数据 | `http://baobab.kaiyanapp.com/api` | `js/api.js` | 必须通过 CORS 代理访问 |
+| **Xunfei Spark (讯飞)** | 提供中英互译功能的 LLM 服务 | `https://maas-api.cn-huabei-1.xf-yun.com/v2` | `js/translator.js` | 使用 OpenAI 兼容格式调用 |
+| **CorsProxy** | 解决跨域 (CORS) 限制 | `https://corsproxy.io/?` | `js/api.js`, `js/translator.js` | 主要代理服务 (支持 POST) |
+| **AllOrigins** | 解决跨域 (CORS) 限制 | `https://api.allorigins.win/get?url=` | `js/api.js` | 备用代理服务 (GET Only) |
+| **Unsplash** | 提供兜底/Mock 数据的图片 | `https://images.unsplash.com` | `js/api.js` | 仅在 API 失败时使用 |
+
+> **注意**: 由于浏览器同源策略限制，所有第三方 API 请求在本地开发环境中均经过了 `CorsProxy` 或 `AllOrigins` 进行转发。
+
+## 3. 快速开始
 
 ### 运行项目
 由于项目使用了 ES6 Modules (`type="module"`) 和跨域网络请求，**不能**直接双击 HTML 文件打开。
